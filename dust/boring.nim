@@ -74,12 +74,10 @@ proc reset*(graph: ModuleGraph) =
   ## reset the module graph so it is ready for recompilation
   # we're not dirty if we don't have a fileindex
   if graph.config.projectMainIdx != InvalidFileIdx:
-    let m = graph.getModule(graph.config.projectMainIdx)
-    if not m.isNil:
-      # mark the program as dirty
-      incl m.flags, sfDirty
+    # mark the program as dirty
+    graph.markDirty graph.config.projectMainIdx
     # mark dependencies as dirty
-    graph.markClientsDirty(graph.config.projectMainIdx)
+    graph.markClientsDirty graph.config.projectMainIdx
     # reset the error counter
     graph.config.errorCounter = 0
 
