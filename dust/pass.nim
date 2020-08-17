@@ -1,3 +1,4 @@
+import std/strutils
 import std/sequtils
 
 import compiler /
@@ -11,16 +12,19 @@ type
 var interesting: string
 var winner = false
 
+proc massageMessage(s: string): string =
+  result = s.splitLines()[0]
+
 proc bolo*(msg: string) =
   ## tell dust which error to "be on look out" for
-  interesting = msg
+  interesting = massageMessage(msg)
 
 proc opener(graph: ModuleGraph; module: PSym): PPassContext {.nosinks.} =
   ## the opener learns when we're compiling the test file
   result = DustContext(mainIndex: graph.config.projectMainIdx)
 
   proc uhoh(config: ConfigRef; info: TLineInfo; msg: string; level: Severity) {.closure, gcsafe.} =
-    if msg == interesting:
+    if massageMessage(msg) == interesting:
       winner = true
 
   graph.config.structuredErrorHook = uhoh
