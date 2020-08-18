@@ -106,12 +106,12 @@ proc setup*(cache: IdentCache; config: ConfigRef): bool =
     processCmdLineAndProjectPath(prog, config)
     result = loadConfigsAndRunMainCommand(prog, cache, config)
 
-proc loadConfig*(cache: IdentCache; filename: string): ConfigRef =
+proc loadConfig*(cache: IdentCache; filename: AbsoluteFile): ConfigRef =
   ## use the ident cache to load the project config for the given filename
   result = newConfigRef()
   initDefines(result.symbols)
 
-  let cfg = filename & ExtSep & "cfg"
+  let cfg = filename.string & ExtSep & "cfg"
   if fileExists(cfg):
     if not readConfigFile(cfg.AbsoluteFile, cache, result):
       raise newException(ValueError, "couldn't parse " & cfg)
@@ -122,3 +122,4 @@ proc loadConfig*(cache: IdentCache; filename: string): ConfigRef =
   incl result.options, optStaticBoundsCheck
   excl result.options, optWarns
   excl result.options, optHints
+  excl result.features, codeReordering
