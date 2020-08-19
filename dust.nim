@@ -113,6 +113,7 @@ proc dust*(filename: AbsoluteFile) =
     debug best
     echo "=== minimal after ", counter, "/", remains.count, " semchecks; scored ", score
     echo best
+    writeFile(filename.string, $best)
 
 when isMainModule:
   if paramCount() > 0:
