@@ -12,7 +12,7 @@ import std/parseopt
 import compiler /
 
   [ idents, nimconf, options, pathutils, modulegraphs, condsyms,
-  lineinfos, cmdlinehelper, commands, msgs, modules, ast ]
+  lineinfos, cmdlinehelper, commands, msgs, modules ]
 
 template excludeAllNotes(config: ConfigRef; n: typed) =
   config.notes.excl n

@@ -1,6 +1,3 @@
-import std/sequtils
-import std/sets
-
 include compiler/sighashes # because too few things are exported
 
 const

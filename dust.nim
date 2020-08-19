@@ -7,7 +7,7 @@ import compiler /
 
 import dust/spec
 import dust/boring
-import dust/pass
+import dust/mutate
 
 template semcheck(body: untyped) {.dirty.} =
   ## perform the complete setup and compilation process
@@ -28,6 +28,13 @@ template semcheck(body: untyped) {.dirty.} =
   body
   registerPass graph, semPass           # perform semcheck
   compile graph                         # run the compile
+  inc counter
+
+proc calculateScore(config: ConfigRef; n: PNode): int =
+  when defined(dustFewerLines):
+    result = config.linesCompiled
+  else:
+    result = size(n)
 
 proc dust*(filename: AbsoluteFile) =
   var
@@ -35,6 +42,11 @@ proc dust*(filename: AbsoluteFile) =
     cache: IdentCache
     config: ConfigRef
     interestingErrorMessage: string
+    best: PNode
+    counter = 0
+    score: int
+    remains: Remains
+    rendered: string
 
   proc uhoh(config: ConfigRef; info: TLineInfo; msg: string; level: Severity) =
     ## capture the first error
@@ -48,9 +60,11 @@ proc dust*(filename: AbsoluteFile) =
   # in the first pass, we add the program to our cache
   semcheck:
     # basically, just taking advantage of cache and config values...
-    remains.add parseString(readFile(filename.string),
-                            cache = cache, config = config, line = 0,
-                            filename = filename.string)
+    best = parseString(readFile(filename.string),
+                       cache = cache, config = config, line = 0,
+                       filename = filename.string)
+    score = size(best)
+    remains.add best
     assert len(remains) > 0
 
   # if the semcheck passes, we have nothing to do
@@ -66,23 +80,39 @@ proc dust*(filename: AbsoluteFile) =
   let expected = config.errorCounter
 
   while len(remains) > 0:
-    echo "remaining: ", len(remains)        # remaining permutations
-    let node = next(remains)                # the next program version
+    echo rendered
+    echo "remaining: ", len(remains), " best: ", score
+    let node = pop(remains)
 
     semcheck:
-      registerPass graph, dustPass          # let dust rewrite program
+      try:
+        writeFile(filename.string, $node)
+      except IndexError:
+        echo "cheating to get around rendering bug"
+        continue
 
     # extra errors are a problem
     if config.errorCounter > expected:
-      echo "got unexpected errors"
+      echo "(unexpected errors)"
     # if we didn't unhook the errors,
     # it means we didn't find the error we were looking for
     elif config.structuredErrorHook != nil:
-      echo "didn't get an interesting error"
+      echo "(uninteresting errors)"
     # i guess this node is a viable reproduction
     else:
-      echo "=== winner"
-      echo $node
+      let z = calculateScore(config, node)
+      if z < score:
+        echo "(new high score)"
+        best = node
+        score = z
+        rendered = $best
+      for mutant in mutations(node):
+        remains.add mutant
+
+  if not best.isNil:
+    debug best
+    echo "=== minimal after ", counter, "/", remains.count, " semchecks; scored ", score
+    echo best
 
 when isMainModule:
   if paramCount() > 0:

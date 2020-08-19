@@ -21,16 +21,20 @@ type
 
 proc len*(r: Remains): int = len(r.attempts)
 
+proc count*(r: Remains): int = len(r.signatures)
+
 proc pop*(remains: var Remains): PNode =
   assert len(remains) > 0, "pop from empty remains"
   result = pop(remains.attempts).node
 
+const
+  unsunny* = {nkCharLit..nkUInt64Lit} +
+             {nkFloatLit..nkFloat128Lit} +
+             {nkStrLit..nkTripleStrLit} +
+             {nkSym, nkIdent}
+
 proc size*(n: PNode): int =
-  const
-    unsunny = {nkCharLit..nkUInt64Lit} +
-              {nkFloatLit..nkFloat128Lit} +
-              {nkStrLit..nkTripleStrLit} +
-              {nkSym, nkIdent}
+  assert not n.isNil
   result = 1
   if n.kind notin unsunny:
     for child in items(n.sons):
