@@ -4,7 +4,6 @@ the boring bits that really aren't very relevant to dust.
 
 ]##
 
-import std/strutils
 import std/times
 import std/os
 import std/parseopt
@@ -12,7 +11,7 @@ import std/parseopt
 import compiler /
 
   [ idents, nimconf, options, pathutils, modulegraphs, condsyms,
-  lineinfos, cmdlinehelper, commands, msgs, modules ]
+  lineinfos, cmdlinehelper, commands, msgs, modules, main ]
 
 template excludeAllNotes(config: ConfigRef; n: typed) =
   config.notes.excl n
@@ -24,12 +23,9 @@ template excludeAllNotes(config: ConfigRef; n: typed) =
 proc cmdLine(pass: TCmdLinePass, cmd: string; config: ConfigRef) =
   ## parse the command-line into the config
   var p = initOptParser(cmd)
-  var argsCount = 1
+  var argsCount = 0
 
-  config.commandLine.setLen 0
-  config.command = "check"
-  config.cmd = cmdCheck
-
+  config.commandLine.setLen 0  # some bug
   while true:
     next(p)
     case p.kind
@@ -54,11 +50,12 @@ proc cmdLine(pass: TCmdLinePass, cmd: string; config: ConfigRef) =
       if processArgument(pass, p, argsCount, config):
         break
 
-  if pass == passCmd2:
-    if {optRun, optWasNimscript} * config.globalOptions == {} and
-        config.arguments.len > 0 and
-        config.command.normalize notin ["run", "e"]:
-      rawMessage(config, errGenerated, errArgsNeedRunOption)
+  when false:
+    if pass == passCmd2:
+      if {optRun, optWasNimscript} * config.globalOptions == {} and
+          config.arguments.len > 0 and
+          config.command.normalize notin ["run", "e"]:
+        rawMessage(config, errGenerated, errArgsNeedRunOption)
 
 proc helpOnError(config: ConfigRef) =
   const
@@ -96,9 +93,9 @@ proc compile*(graph: ModuleGraph) =
   compileProject graph                        # process the graph
 
 proc setup*(cache: IdentCache; config: ConfigRef): bool =
-  proc noop(graph: ModuleGraph) = discard
+  proc noop(graph: ModuleGraph) {.used.} = discard
   let prog = NimProg(supportsStdinFile: true,
-                     processCmdLine: cmdLine, mainCommand: noop)
+                     processCmdLine: cmdLine, mainCommand: mainCommand)
   initDefinesProg(prog, config, "dust")
   if paramCount() == 0:
     helpOnError(config)

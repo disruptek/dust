@@ -117,6 +117,6 @@ proc dust*(filename: AbsoluteFile) =
 
 when isMainModule:
   if paramCount() > 0:
-    dust paramStr(1).AbsoluteFile
+    dust paramStr(paramCount()).AbsoluteFile
   else:
     echo "supply a source file to inspect"
