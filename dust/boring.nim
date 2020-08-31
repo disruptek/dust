@@ -13,6 +13,9 @@ import compiler /
   [ idents, nimconf, options, pathutils, modulegraphs, condsyms,
   lineinfos, cmdlinehelper, commands, msgs, modules, main ]
 
+const
+  NimCfg* {.strdefine.} = "nim".addFileExt "cfg"
+
 template excludeAllNotes(config: ConfigRef; n: typed) =
   config.notes.excl n
   when compiles(config.mainPackageNotes):
@@ -103,18 +106,34 @@ proc setup*(cache: IdentCache; config: ConfigRef): bool =
     processCmdLineAndProjectPath(prog, config)
     result = loadConfigsAndRunMainCommand(prog, cache, config)
 
+proc parentDir(file: AbsoluteFile): AbsoluteDir =
+  result = AbsoluteDir(file) / RelativeDir".."
+
 proc loadConfig*(cache: IdentCache; filename: AbsoluteFile): ConfigRef =
   ## use the ident cache to load the project config for the given filename
   result = newConfigRef()
+
+  #excludeAllNotes(result, hintConf)
+  #excludeAllNotes(result, hintLineTooLong)
+
   initDefines(result.symbols)
 
-  let cfg = filename.string & ExtSep & "cfg"
-  if fileExists(cfg):
-    if not readConfigFile(cfg.AbsoluteFile, cache, result):
-      raise newException(ValueError, "couldn't parse " & cfg)
+  let compilerPath = AbsoluteFile findExe"nim"
+  result.prefixDir = parentDir(compilerPath) / RelativeDir".."
+  result.projectPath = parentDir(filename)
 
-  excludeAllNotes(result, hintConf)
-  excludeAllNotes(result, hintLineTooLong)
+  when false:
+    let cfg = filename.string & ExtSep & "cfg"
+    if fileExists(cfg):
+      if not readConfigFile(cfg.AbsoluteFile, cache, result):
+        raise newException(ValueError, "couldn't parse " & cfg)
+  else:
+    let cwd = getCurrentDir()
+    setCurrentDir $result.projectPath
+    try:
+      loadConfigs(NimCfg.RelativeFile, cache, result)
+    finally:
+      setCurrentDir cwd
 
   incl result.options, optStaticBoundsCheck
   excl result.options, optWarns
