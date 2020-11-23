@@ -95,23 +95,23 @@ proc compile*(graph: ModuleGraph) =
   graph.suggestMode = true                    # needed for dirty flags
   compileProject graph                        # process the graph
 
-proc setup*(cache: IdentCache; config: ConfigRef): bool =
+proc setup*(cache: IdentCache; config: ConfigRef; graph: ModuleGraph): bool =
   proc noop(graph: ModuleGraph) {.used.} = discard
   let prog = NimProg(supportsStdinFile: true,
-                     processCmdLine: cmdLine, mainCommand: mainCommand)
+                     processCmdLine: cmdLine) #, mainCommand: mainCommand)
   initDefinesProg(prog, config, "dust")
   if paramCount() == 0:
     helpOnError(config)
   else:
     processCmdLineAndProjectPath(prog, config)
-    result = loadConfigsAndRunMainCommand(prog, cache, config)
+    result = loadConfigsAndProcessCmdLine(prog, cache, config, graph)
 
 proc parentDir(file: AbsoluteFile): AbsoluteDir =
   result = AbsoluteDir(file) / RelativeDir".."
 
-proc loadConfig*(cache: IdentCache; filename: AbsoluteFile): ConfigRef =
+proc loadConfig*(graph: ModuleGraph; fn: AbsoluteFile) =
   ## use the ident cache to load the project config for the given filename
-  result = newConfigRef()
+  var result = graph.config
 
   #excludeAllNotes(result, hintConf)
   #excludeAllNotes(result, hintLineTooLong)
@@ -120,18 +120,18 @@ proc loadConfig*(cache: IdentCache; filename: AbsoluteFile): ConfigRef =
 
   let compilerPath = AbsoluteFile findExe"nim"
   result.prefixDir = parentDir(compilerPath) / RelativeDir".."
-  result.projectPath = parentDir(filename)
+  result.projectPath = parentDir(fn)
 
   when false:
-    let cfg = filename.string & ExtSep & "cfg"
+    let cfg = fn.string & ExtSep & "cfg"
     if fileExists(cfg):
-      if not readConfigFile(cfg.AbsoluteFile, cache, result):
+      if not readConfigFile(cfg.AbsoluteFile, graph.cache, result):
         raise newException(ValueError, "couldn't parse " & cfg)
   else:
     let cwd = getCurrentDir()
     setCurrentDir $result.projectPath
     try:
-      loadConfigs(NimCfg.RelativeFile, cache, result)
+      loadConfigs(NimCfg.RelativeFile, graph.cache, result, graph.idgen)
     finally:
       setCurrentDir cwd
 

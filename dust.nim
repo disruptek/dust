@@ -12,11 +12,12 @@ import dust/mutate
 template semcheck(body: untyped) {.dirty.} =
   ## perform the complete setup and compilation process
   cache = newIdentCache()
-  config = loadConfig(cache, filename)
+  config = newConfigRef()
   graph = newModuleGraph(cache, config)
+  graph.loadConfig(filename)
 
   # perform boring setup of the config using the cache
-  if not setup(cache, config):
+  if not setup(cache, config, graph):
     echo "crashing due to error during setup"
     quit 1
 
@@ -24,7 +25,8 @@ template semcheck(body: untyped) {.dirty.} =
   config.structuredErrorHook = uhoh     # hook into errors
 
   # create a new module graph
-  graph = newModuleGraph(cache, config)
+  #graph = newModuleGraph(cache, config)
+
   body
   registerPass graph, semPass           # perform semcheck
   compile graph                         # run the compile
@@ -47,6 +49,8 @@ proc dust*(filename: AbsoluteFile) =
     score: int
     remains: Remains
     rendered: string
+
+  #interestingErrorMessage = """the macro body cannot be compiled, because the parameter 'j' has a generic type"""
 
   proc uhoh(config: ConfigRef; info: TLineInfo; msg: string; level: Severity) =
     ## capture the first error
