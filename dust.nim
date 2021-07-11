@@ -25,7 +25,8 @@ template semcheck(body: untyped) {.dirty.} =
   config.structuredErrorHook = uhoh     # hook into errors
 
   # create a new module graph
-  #graph = newModuleGraph(cache, config)
+  graph = newModuleGraph(cache, config)
+  graph.loadConfig(filename)
 
   body
   registerPass graph, semPass           # perform semcheck
